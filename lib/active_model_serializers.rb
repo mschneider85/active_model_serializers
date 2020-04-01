@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'active_model'
 require 'active_support'
 require 'active_support/core_ext/object/with_options'
@@ -5,16 +7,19 @@ require 'active_support/core_ext/string/inflections'
 require 'active_support/json'
 module ActiveModelSerializers
   extend ActiveSupport::Autoload
-  autoload :Model
-  autoload :Callbacks
-  autoload :Deserialization
-  autoload :SerializableResource
-  autoload :Logging
-  autoload :Test
-  autoload :Adapter
-  autoload :JsonPointer
-  autoload :Deprecate
-  autoload :LookupChain
+  eager_autoload do
+    autoload :Model
+    autoload :Callbacks
+    autoload :SerializableResource
+    autoload :SerializationContext
+    autoload :Logging
+    autoload :Test
+    autoload :Adapter
+    autoload :JsonPointer
+    autoload :Deprecate
+    autoload :LookupChain
+    autoload :Deserialization
+  end
 
   class << self; attr_accessor :logger; end
   self.logger = ActiveSupport::TaggedLogging.new(ActiveSupport::Logger.new(STDOUT))
@@ -44,6 +49,11 @@ module ActiveModelSerializers
     yield
   ensure
     $VERBOSE = original_verbose
+  end
+
+  def self.eager_load!
+    super
+    ActiveModel::Serializer.eager_load!
   end
 
   require 'active_model/serializer/version'

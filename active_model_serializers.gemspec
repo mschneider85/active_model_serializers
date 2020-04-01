@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
@@ -14,14 +15,13 @@ Gem::Specification.new do |spec|
   spec.homepage      = 'https://github.com/rails-api/active_model_serializers'
   spec.license       = 'MIT'
 
-  spec.files         = `git ls-files -z`.split("\x0")
-  spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
+  spec.files         = Dir['CHANGELOG.md', 'MIT-LICENSE', 'README.md', 'lib/**/*']
   spec.require_paths = ['lib']
   spec.executables   = []
 
   spec.required_ruby_version = '>= 2.1'
 
-  rails_versions = ['>= 4.1', '< 6']
+  rails_versions = ['>= 4.1', '< 6.1']
   spec.add_runtime_dependency 'activemodel', rails_versions
   # 'activesupport', rails_versions
   # 'builder'
@@ -39,7 +39,7 @@ Gem::Specification.new do |spec|
   # 'activesupport', rails_versions
   # 'i18n,
   # 'tzinfo'
-  # 'minitest'
+  spec.add_development_dependency 'minitest', ['~> 5.0', '< 5.11']
   # 'thread_safe'
 
   spec.add_runtime_dependency 'jsonapi-renderer', ['>= 0.1.1.beta1', '< 0.3']
@@ -59,5 +59,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'timecop', '~> 0.7'
   spec.add_development_dependency 'grape', ['>= 0.13', '< 0.19.1']
   spec.add_development_dependency 'json_schema'
-  spec.add_development_dependency 'rake', ['>= 10.0', '< 12.0']
+  spec.add_development_dependency 'rake', ['>= 10.0', '< 13.0']
 end

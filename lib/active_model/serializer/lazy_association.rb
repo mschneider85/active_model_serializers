@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module ActiveModel
   class Serializer
     # @api private
@@ -7,11 +9,12 @@ module ActiveModel
       delegate :collection?, to: :reflection
 
       def reflection_options
-        @reflection_options ||= reflection.options.dup.reject { |k, _| !REFLECTION_OPTIONS.include?(k) }
+        @reflection_options ||= reflection.options.select { |k, _| REFLECTION_OPTIONS.include?(k) }
       end
 
       def object
-        @object ||= reflection.value(
+        return @object if defined?(@object)
+        @object = reflection.value(
           association_options.fetch(:parent_serializer),
           association_options.fetch(:include_slice)
         )
@@ -76,6 +79,7 @@ module ActiveModel
         serializer_options[:serializer_context_class] = association_options.fetch(:parent_serializer).class
         serializer = reflection_options.fetch(:serializer, nil)
         serializer_options[:serializer] = serializer if serializer
+        serializer_options[:namespace]  = reflection_options[:namespace] if reflection_options[:namespace]
         serializer_class.new(object, serializer_options)
       end
 

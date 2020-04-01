@@ -1,14 +1,62 @@
 ## 0.10.x
 
-### [master (unreleased)](https://github.com/rails-api/active_model_serializers/compare/v0.10.7...0-10-stable)
+### [master (unreleased)](https://github.com/rails-api/active_model_serializers/compare/v0.10.10...0-10-stable)
 
 Breaking changes:
 
 Features:
 
+- [#2361](https://github.com/rails-api/active_model_serializers/pull/2361) Add `ActiveModelSerializers.config.use_sha1_digests` to allow customization of the hashing algorithm used for serializer caching (@alexzherdev)
+
 Fixes:
 
+- [#2344](https://github.com/rails-api/active_model_serializers/pull/2344) Fixes #2341 introduced since #2223 (@wasifhossain)
+
 Misc:
+
+### [v0.10.10 (2019-07-13)](https://github.com/rails-api/active_model_serializers/compare/v0.10.9...v0.10.10)
+
+Fixes:
+
+- [#2319](https://github.com/rails-api/active_model_serializers/pull/2319) Fixes #2316. (@kylekeesling)
+    - Fix Rails 6.0 deprication warnings
+    - update test fixture schema to use `timestamps` instead of `timestamp`
+- [#2223](https://github.com/rails-api/active_model_serializers/pull/2223) Support Fieldset in Attributes/JSON adapters documented in [docs/general/fields.md](https://github.com/rails-api/active_model_serializers/blob/0-10-stable/docs/general/fields.md) that worked partially before (@bf4)
+- [#2337](https://github.com/rails-api/active_model_serializers/pull/2337) fix incorrect belongs_to serialization when foreign_key on object and belongs_to is blank (@InteNs)
+    - Fixes incorrect json-api generation when `jsonapi_use_foreign_key_on_belongs_to_relationship` is `true` and the relationship is blank
+- [#2172](https://github.com/rails-api/active_model_serializers/pull/2172) Preserve the namespace when falling back to a superclass serializer
+
+Misc:
+
+- [#2327](https://github.com/rails-api/active_model_serializers/pull/2327) Add support for Ruby 2.6 on Travis CI (@wasifhossain)
+- [#2304](https://github.com/rails-api/active_model_serializers/pull/2304) Slim down bundled gem by excluding test files and docs (@greysteil)
+
+### [v0.10.9 (2019-02-08)](https://github.com/rails-api/active_model_serializers/compare/v0.10.8...v0.10.9)
+
+Fixes:
+
+- [#2288](https://github.com/rails-api/active_model_serializers/pull/2288)
+  Change the fetch method to deal with recyclable key cache strategy.
+  Fixes #2287. (@cintamani, @wasifhossain)
+- [#2307](https://github.com/rails-api/active_model_serializers/pull/2307) Falsey attribute values should not be reevaluated.
+
+Misc:
+
+- [#2309](https://github.com/rails-api/active_model_serializers/pull/2309) Performance and memory usage fixes
+
+### [v0.10.8 (2018-11-01)](https://github.com/rails-api/active_model_serializers/compare/v0.10.7...v0.10.8)
+
+Features:
+- [#2279](https://github.com/rails-api/active_model_serializers/pull/2279) Support condition options in serializer link statements
+
+Fixes:
+
+- [#2296](https://github.com/rails-api/active_model_serializers/pull/2296) Fixes #2295 (@Hirurg103)
+  - Fix finding of namespaced serializer and non-namespaced model.
+- [#2289](https://github.com/rails-api/active_model_serializers/pull/2289) Fixes #2255 (@f-mer)
+  - Fix autoloading race condition, especially in Rails 5.
+- [#2299](https://github.com/rails-api/active_model_serializers/pull/2299) Fixes #2270 (@chau-bao-long via #2276)
+  - Fix reflection thread-safety bug
 
 ### [v0.10.7 (2017-11-14)](https://github.com/rails-api/active_model_serializers/compare/v0.10.6...v0.10.7)
 

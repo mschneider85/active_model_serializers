@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module ActiveModelSerializers
   module Adapter
     class JsonApi
@@ -11,7 +13,7 @@ module ActiveModelSerializers
           type = inflect_type(type)
           type = type_for(:no_class_needed, type, options)
           if id.blank?
-            { type: type }
+            nil
           else
             { id: id.to_s, type: type }
           end

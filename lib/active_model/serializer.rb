@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'thread_safe'
 require 'jsonapi/include_directive'
 require 'active_model/serializer/collection_serializer'
@@ -18,16 +20,17 @@ module ActiveModel
     # @see #serializable_hash for more details on these valid keys.
     SERIALIZABLE_HASH_VALID_KEYS = [:only, :except, :methods, :include, :root].freeze
     extend ActiveSupport::Autoload
-    autoload :Adapter
-    autoload :Null
-    autoload :Attribute
-    autoload :Association
-    autoload :Reflection
-    autoload :SingularReflection
-    autoload :CollectionReflection
-    autoload :BelongsToReflection
-    autoload :HasOneReflection
-    autoload :HasManyReflection
+    eager_autoload do
+      autoload :Adapter
+      autoload :Null
+      autoload :Attribute
+      autoload :Link
+      autoload :Association
+      autoload :Reflection
+      autoload :BelongsToReflection
+      autoload :HasOneReflection
+      autoload :HasManyReflection
+    end
     include ActiveSupport::Configurable
     include Caching
 
@@ -70,7 +73,7 @@ module ActiveModel
     # Used to cache serializer name => serializer class
     # when looked up by Serializer.get_serializer_for.
     def self.serializers_cache
-      @serializers_cache ||= ThreadSafe::Cache.new
+      @serializers_cache ||= Concurrent::Map.new
     end
 
     # @api private
@@ -91,7 +94,7 @@ module ActiveModel
         if serializer_class
           serializer_class
         elsif klass.superclass
-          get_serializer_for(klass.superclass)
+          get_serializer_for(klass.superclass, namespace)
         else
           nil # No serializer found
         end
@@ -275,9 +278,14 @@ module ActiveModel
     #   link(:self) { "http://example.com/resource/#{object.id}" }
     # @example
     #   link :resource, "http://example.com/resource"
+    # @example
+    #   link(:callback, if: :internal?), { "http://example.com/callback" }
     #
-    def self.link(name, value = nil, &block)
-      _links[name] = block || value
+    def self.link(name, *args, &block)
+      options = args.extract_options!
+      # For compatibility with the use case of passing link directly as string argument
+      # without block, we are creating a wrapping block
+      _links[name] = Link.new(name, options, block || ->(_serializer) { args.first })
     end
 
     # Set the JSON API meta attribute of a serializer.
@@ -341,7 +349,7 @@ module ActiveModel
       return Enumerator.new {} unless object
 
       Enumerator.new do |y|
-        self.class._reflections.each do |key, reflection|
+        (self.instance_reflections ||= self.class._reflections.deep_dup).each do |key, reflection|
           next if reflection.excluded?(self)
           next unless include_directive.key?(key)
 
@@ -357,6 +365,9 @@ module ActiveModel
     def serializable_hash(adapter_options = nil, options = {}, adapter_instance = self.class.serialization_adapter_instance)
       adapter_options ||= {}
       options[:include_directive] ||= ActiveModel::Serializer.include_directive_from_options(adapter_options)
+      if (fieldset = adapter_options[:fieldset])
+        options[:fields] = fieldset.fields_for(json_key)
+      end
       resource = attributes_hash(adapter_options, options, adapter_instance)
       relationships = associations_hash(adapter_options, options, adapter_instance)
       resource.merge(relationships)
@@ -371,7 +382,12 @@ module ActiveModel
 
     # Used by adapter as resource root.
     def json_key
-      root || _type || object.class.model_name.to_s.underscore
+      root || _type ||
+        begin
+          object.class.model_name.to_s.underscore
+        rescue ArgumentError
+          'anonymous_object'
+        end
     end
 
     def read_attribute_for_serialization(attr)
@@ -405,6 +421,6 @@ module ActiveModel
 
     protected
 
-    attr_accessor :instance_options
+    attr_accessor :instance_options, :instance_reflections
   end
 end

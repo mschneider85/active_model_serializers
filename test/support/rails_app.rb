@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'support/isolated_unit'
 module ActiveModelSerializers
   RailsApplication = TestHelpers::Generation.make_basic_app do |app|
@@ -6,6 +8,10 @@ module ActiveModelSerializers
       config.active_support.test_order = :random
       config.action_controller.perform_caching = true
       config.action_controller.cache_store = :memory_store
+
+      if Rails::VERSION::MAJOR >= 6
+        config.action_dispatch.return_only_media_type_on_content_type = true
+      end
 
       config.filter_parameters += [:password]
     end

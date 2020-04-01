@@ -1,4 +1,12 @@
+# frozen_string_literal: true
+
 source 'https://rubygems.org'
+
+git_source(:github) do |repo_name|
+  repo_name = "#{repo_name}/#{repo_name}" unless repo_name.include?('/')
+  "https://github.com/#{repo_name}.git"
+end
+
 #
 # Add a Gemfile.local to locally bundle gems outside of version control
 local_gemfile = File.join(File.expand_path('..', __FILE__), 'Gemfile.local')
@@ -51,19 +59,31 @@ group :bench do
 end
 
 group :test do
-  gem 'sqlite3', platform: (@windows_platforms + [:ruby])
-  platforms :jruby do
-    if version == 'master' || version >= '5'
-      gem 'activerecord-jdbcsqlite3-adapter', '>= 1.3.0' # github: 'jruby/activerecord-jdbc-adapter', branch: 'master'
+  platforms(*(@windows_platforms + [:ruby])) do
+    if version == 'master' || version >= '6'
+      gem 'sqlite3', '~> 1.4'
     else
-      gem 'activerecord-jdbcsqlite3-adapter'
+      gem 'sqlite3', '~> 1.3.13'
+    end
+  end
+  platforms :jruby do
+    if version == 'master' || version >= '6.0'
+      gem 'activerecord-jdbcsqlite3-adapter', github: 'jruby/activerecord-jdbc-adapter'
+    elsif version == '5.2'
+      gem 'activerecord-jdbcsqlite3-adapter', '~> 52.0'
+    elsif version == '5.1'
+      gem 'activerecord-jdbcsqlite3-adapter', '~> 51.0'
+    elsif version == '5.0'
+      gem 'activerecord-jdbcsqlite3-adapter', '~> 50.0'
+    else
+      gem 'activerecord-jdbcsqlite3-adapter', '~> 1.3.0'
     end
   end
   gem 'codeclimate-test-reporter', require: false
   gem 'm', '~> 1.5'
   gem 'pry', '>= 0.10'
   gem 'byebug', '~> 8.2' if RUBY_VERSION < '2.2'
-  gem 'pry-byebug', platform: :ruby
+  gem 'pry-byebug', platforms: :ruby
 end
 
 group :development, :test do

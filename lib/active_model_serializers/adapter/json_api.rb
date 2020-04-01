@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # {http://jsonapi.org/format/ JSON API specification}
 # rubocop:disable Style/AsciiComments
 # TODO: implement!
@@ -22,14 +24,16 @@ module ActiveModelSerializers
   module Adapter
     class JsonApi < Base
       extend ActiveSupport::Autoload
-      autoload :Jsonapi
-      autoload :ResourceIdentifier
-      autoload :Relationship
-      autoload :Link
-      autoload :PaginationLinks
-      autoload :Meta
-      autoload :Error
-      autoload :Deserialization
+      eager_autoload do
+        autoload :Jsonapi
+        autoload :ResourceIdentifier
+        autoload :Link
+        autoload :PaginationLinks
+        autoload :Meta
+        autoload :Error
+        autoload :Deserialization
+        autoload :Relationship
+      end
 
       def self.default_key_transform
         :dash
@@ -480,7 +484,8 @@ module ActiveModelSerializers
       #   }.reject! {|_,v| v.nil? }
       def links_for(serializer)
         serializer._links.each_with_object({}) do |(name, value), hash|
-          result = Link.new(serializer, value).as_json
+          next if value.excluded?(serializer)
+          result = Link.new(serializer, value.block).as_json
           hash[name] = result if result
         end
       end

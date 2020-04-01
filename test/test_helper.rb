@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Configure Rails Environment
 ENV['RAILS_ENV'] = 'test'
 require 'bundler/setup'
@@ -53,6 +55,8 @@ module TestHelper
 end
 
 require 'support/rails_app'
+
+require 'support/ruby_2_6_rails_4_2_patch'
 
 # require "rails/test_help"
 

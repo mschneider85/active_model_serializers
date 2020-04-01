@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module ActiveModelSerializers
   module Adapter
     UnknownAdapterError = Class.new(ArgumentError)
@@ -35,7 +37,7 @@ module ActiveModelSerializers
 
       # @return [Array<Symbol>] list of adapter names
       def adapters
-        adapter_map.keys.sort
+        adapter_map.keys.sort!
       end
 
       # Adds an adapter 'klass' with 'name' to the 'adapter_map'

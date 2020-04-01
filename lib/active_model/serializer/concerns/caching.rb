@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module ActiveModel
   class Serializer
     UndefinedCacheKey = Class.new(StandardError)
@@ -54,7 +56,8 @@ module ActiveModel
         def digest_caller_file(caller_line)
           serializer_file_path = caller_line[CALLER_FILE]
           serializer_file_contents = IO.read(serializer_file_path)
-          Digest::MD5.hexdigest(serializer_file_contents)
+          algorithm = ActiveModelSerializers.config.use_sha1_digests ? Digest::SHA1 : Digest::MD5
+          algorithm.hexdigest(serializer_file_contents)
         rescue TypeError, Errno::ENOENT
           warn <<-EOF.strip_heredoc
             Cannot digest non-existent file: '#{caller_line}'.
@@ -281,7 +284,9 @@ module ActiveModel
       # Use object's cache_key if available, else derive a key from the object
       # Pass the `key` option to the `cache` declaration or override this method to customize the cache key
       def object_cache_key
-        if object.respond_to?(:cache_key)
+        if object.respond_to?(:cache_key_with_version)
+          object.cache_key_with_version
+        elsif object.respond_to?(:cache_key)
           object.cache_key
         elsif (serializer_cache_key = (serializer_class._cache_key || serializer_class._cache_options[:key]))
           object_time_safe = object.updated_at

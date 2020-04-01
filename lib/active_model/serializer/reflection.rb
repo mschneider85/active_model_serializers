@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'active_model/serializer/field'
 require 'active_model/serializer/association'
 
@@ -85,8 +87,8 @@ module ActiveModel
       #       meta ids: ids
       #     end
       #   end
-      def link(name, value = nil)
-        options[:links][name] = block_given? ? Proc.new : value
+      def link(name, value = nil, &block)
+        options[:links][name] = block_given? ? block : value
         :nil
       end
 
@@ -100,8 +102,8 @@ module ActiveModel
       #       href object.blog.id.to_s
       #       meta(id: object.blog.id)
       #     end
-      def meta(value = nil)
-        options[:meta] = block_given? ? Proc.new : value
+      def meta(value = nil, &block)
+        options[:meta] = block_given? ? block : value
         :nil
       end
 
@@ -151,6 +153,9 @@ module ActiveModel
       # @yield [ActiveModel::Serializer]
       # @return [:nil, associated resource or resource collection]
       def value(serializer, include_slice)
+        # NOTE(BF): This method isn't thread-safe because the _reflections class attribute is not thread-safe
+        # Therefore, when we build associations from reflections, we dup the entire reflection instance.
+        # Better solutions much appreciated!
         @object = serializer.object
         @scope = serializer.scope
 

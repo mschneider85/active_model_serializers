@@ -4,7 +4,7 @@ require 'test_helper'
 
 module ActiveModelSerializers
   module Adapter
-    class JsonApi
+    class Json
       class FieldsTest < ActiveSupport::TestCase
         class Post < ::Model
           attributes :title, :body
@@ -14,25 +14,24 @@ module ActiveModelSerializers
           attributes :name, :birthday
         end
         class Comment < ::Model
-          attributes :body
+          attributes :title, :body
           associations :author, :post
         end
 
         class PostSerializer < ActiveModel::Serializer
-          type 'posts'
+          type 'post'
           attributes :title, :body
           belongs_to :author
           has_many :comments
         end
 
         class AuthorSerializer < ActiveModel::Serializer
-          type 'authors'
           attributes :name, :birthday
         end
 
         class CommentSerializer < ActiveModel::Serializer
-          type 'comments'
-          attributes :body
+          type 'comment'
+          attributes :title, :body
           belongs_to :author
         end
 
@@ -47,50 +46,18 @@ module ActiveModelSerializers
         end
 
         def test_fields_attributes
-          fields = { posts: [:title] }
-          hash = serializable(@post, adapter: :json_api, fields: fields).serializable_hash
-          expected = {
-            title: 'Title 1'
-          }
-
-          assert_equal(expected, hash[:data][:attributes])
-        end
-
-        def test_fields_relationships
-          fields = { posts: [:author] }
-          hash = serializable(@post, adapter: :json_api, fields: fields).serializable_hash
-          expected = {
-            author: {
-              data: {
-                type: 'authors',
-                id: '1'
-              }
-            }
-          }
-
-          assert_equal(expected, hash[:data][:relationships])
+          fields = [:title]
+          hash = serializable(@post, adapter: :json, fields: fields, include: []).serializable_hash
+          expected = { title: 'Title 1' }
+          assert_equal(expected, hash[:post])
         end
 
         def test_fields_included
-          fields = { posts: [:author], comments: [:body] }
-          hash = serializable(@post, adapter: :json_api, fields: fields, include: 'comments').serializable_hash
-          expected = [
-            {
-              type: 'comments',
-              id: '7',
-              attributes: {
-                body: 'cool'
-              }
-            }, {
-              type: 'comments',
-              id: '12',
-              attributes: {
-                body: 'awesome'
-              }
-            }
-          ]
+          fields = [:title, { comments: [:body] }]
+          hash = serializable(@post, adapter: :json, include: [:comments], fields: fields).serializable_hash
+          expected = [{ body: @comment1.body }, { body: @comment2.body }]
 
-          assert_equal(expected, hash[:included])
+          assert_equal(expected, hash[:post][:comments])
         end
       end
     end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 require 'tmpdir'
 require 'tempfile'
@@ -52,6 +54,11 @@ module ActiveModelSerializers
       has_many :posts
       has_many :roles
       has_one :bio
+    end
+    class AuthorSerializerWithCache < ActiveModel::Serializer
+      cache
+
+      attributes :name
     end
 
     class Blog < ::Model
@@ -142,6 +149,67 @@ module ActiveModelSerializers
       @author_serializer   = AuthorSerializer.new(@author)
       @comment_serializer  = CommentSerializer.new(@comment)
       @blog_serializer     = BlogSerializer.new(@blog)
+    end
+
+    def test_expiring_of_cache_at_update_of_record
+      original_cache_versioning = :none
+
+      if ARModels::Author.respond_to?(:cache_versioning)
+        original_cache_versioning = ARModels::Author.cache_versioning
+        ARModels::Author.cache_versioning = true
+      end
+
+      author = ARModels::Author.create(name: 'Foo')
+      author_json = AuthorSerializerWithCache.new(author).as_json
+
+      assert_equal 'Foo', author_json[:name]
+
+      author.update(name: 'Bar')
+      author_json = AuthorSerializerWithCache.new(author).as_json
+
+      expected = 'Bar'
+      actual = author_json[:name]
+      if ENV['APPVEYOR'] && actual != expected
+        skip('Cache expiration tests sometimes fail on Appveyor. FIXME :)')
+      else
+        assert_equal expected, actual
+      end
+    ensure
+      ARModels::Author.cache_versioning = original_cache_versioning unless original_cache_versioning == :none
+    end
+
+    def test_cache_expiration_in_collection_on_update_of_record
+      original_cache_versioning = :none
+
+      if ARModels::Author.respond_to?(:cache_versioning)
+        original_cache_versioning = ARModels::Author.cache_versioning
+        ARModels::Author.cache_versioning = true
+      end
+
+      foo               = 'Foo'
+      foo2              = 'Foo2'
+      author            = ARModels::Author.create(name: foo)
+      author2           = ARModels::Author.create(name: foo2)
+      author_collection = [author, author, author2]
+
+      collection_json = render_object_with_cache(author_collection, each_serializer: AuthorSerializerWithCache)
+      actual = collection_json
+      expected = [{ name: foo }, { name: foo }, { name: foo2 }]
+      if ENV['APPVEYOR'] && actual != expected
+        skip('Cache expiration tests sometimes fail on Appveyor. FIXME :)')
+      else
+        assert_equal expected, actual
+      end
+
+      bar = 'Bar'
+      Timecop.travel(10.seconds.from_now) do
+        author.update!(name: bar)
+
+        collection_json = render_object_with_cache(author_collection, each_serializer: AuthorSerializerWithCache)
+        assert_equal [{ name: bar }, { name: bar }, { name: foo2 }], collection_json
+      end
+    ensure
+      ARModels::Author.cache_versioning = original_cache_versioning unless original_cache_versioning == :none
     end
 
     def test_explicit_cache_store
@@ -378,15 +446,39 @@ module ActiveModelSerializers
     # rubocop:enable Metrics/AbcSize
 
     def test_uses_file_digest_in_cache_key
+      reset_cache_digest(@blog_serializer)
       render_object_with_cache(@blog)
       file_digest = Digest::MD5.hexdigest(File.open(__FILE__).read)
       key = "#{@blog.cache_key}/#{adapter.cache_key}/#{file_digest}"
       assert_equal(@blog_serializer.attributes, cache_store.fetch(key))
     end
 
+    def test_uses_sha1_digest_in_cache_key_when_configured
+      reset_cache_digest(@blog_serializer)
+      previous_use_sha1_digests = ActiveModelSerializers.config.use_sha1_digests
+      ActiveModelSerializers.config.use_sha1_digests = true
+      render_object_with_cache(@blog)
+      file_digest = Digest::SHA1.hexdigest(File.open(__FILE__).read)
+      key = "#{@blog.cache_key}/#{adapter.cache_key}/#{file_digest}"
+      assert_equal(@blog_serializer.attributes, cache_store.fetch(key))
+    ensure
+      ActiveModelSerializers.config.use_sha1_digests = previous_use_sha1_digests
+    end
+
     def test_cache_digest_definition
+      reset_cache_digest(@post_serializer)
       file_digest = Digest::MD5.hexdigest(File.open(__FILE__).read)
       assert_equal(file_digest, @post_serializer.class._cache_digest)
+    end
+
+    def test_cache_sha1_digest_definition
+      reset_cache_digest(@post_serializer)
+      previous_use_sha1_digests = ActiveModelSerializers.config.use_sha1_digests
+      ActiveModelSerializers.config.use_sha1_digests = true
+      file_digest = Digest::SHA1.hexdigest(File.open(__FILE__).read)
+      assert_equal(file_digest, @post_serializer.class._cache_digest)
+    ensure
+      ActiveModelSerializers.config.use_sha1_digests = previous_use_sha1_digests
     end
 
     def test_object_cache_keys
@@ -415,7 +507,7 @@ module ActiveModelSerializers
         adapter_options = {}
         adapter_instance = ActiveModelSerializers::Adapter::Attributes.new(serializers, adapter_options)
         serializers.serializable_hash(adapter_options, options, adapter_instance)
-        cached_attributes = adapter_options.fetch(:cached_attributes).with_indifferent_access
+        cached_attributes = options.fetch(:cached_attributes).with_indifferent_access
 
         include_directive = ActiveModelSerializers.default_include_directive
         manual_cached_attributes = ActiveModel::Serializer.cache_read_multi(serializers, adapter_instance, include_directive).with_indifferent_access
@@ -446,9 +538,9 @@ module ActiveModelSerializers
         serializers.serializable_hash(adapter_options, options, adapter_instance)
 
         # Should find something with read_multi now
-        adapter_options = {}
+        options = {}
         serializers.serializable_hash(adapter_options, options, adapter_instance)
-        cached_attributes = adapter_options.fetch(:cached_attributes)
+        cached_attributes = options.fetch(:cached_attributes)
 
         include_directive = ActiveModelSerializers.default_include_directive
         manual_cached_attributes = ActiveModel::Serializer.cache_read_multi(serializers, adapter_instance, include_directive)
@@ -646,6 +738,11 @@ module ActiveModelSerializers
 
     def adapter
       @serializable_resource.adapter
+    end
+
+    def reset_cache_digest(serializer)
+      return unless serializer.class.instance_variable_defined?(:@_cache_digest)
+      serializer.class.remove_instance_variable(:@_cache_digest)
     end
   end
 end

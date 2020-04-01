@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 
 module ActiveModelSerializers
@@ -54,9 +56,8 @@ module ActiveModelSerializers
 
         def test_transform_undefined
           mock_request(:blam)
-          result = nil
           assert_raises NoMethodError do
-            result = @adapter.serializable_hash
+            @adapter.serializable_hash
           end
         end
 
